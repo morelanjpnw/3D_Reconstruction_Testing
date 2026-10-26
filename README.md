@@ -10,6 +10,10 @@ git clone https://github.com/morelanjpnw/3D_Reconstruction_Testing.git
 cd 3D_Reconstruction_Testing
 powershell -ExecutionPolicy Bypass -File .\setup_windows.ps1 -CheckOnly   # reports anything missing (installs nothing)
 powershell -ExecutionPolicy Bypass -File .\setup_windows.ps1              # installs tools + env, GPU self-test (5-15 min first time)
+# 4. Launch the interactive Web UI (recommended) - or run via CLI below
+.\launch_ui.cmd
+
+# --- OR run via CLI ---
 tools\env.local.cmd python scripts\prepare_data.py                        # downloads the truck test scene -> inputs\truck.mp4
 tools\env.local.cmd python scripts\experiment.py --config configs\rtx6000_quick.yaml --video inputs\truck.mp4 --cases baseline case1 case2 case4 case3 case5 case6
 ```

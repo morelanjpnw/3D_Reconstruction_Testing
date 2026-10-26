@@ -183,7 +183,18 @@ def run_case(ctx: Ctx, case: str):
         make_generation(ctx, "baseline_gen1", "case6a_toon_gen2", [ORIGINAL], "toon", False, s0,
                         "deterministic toon stylisation (metrics vs real are NOT meaningful)")
     else:
-        raise SystemExit(f"unknown case {case}")
+        custom_cases = c.get("custom_cases", {})
+        if case in custom_cases:
+            spec = custom_cases[case]
+            src_run = spec.get("src_run", "baseline_gen1")
+            run_name = spec.get("run_name", f"{case}_gen2")
+            op = spec.get("op", up)
+            anchor = bool(spec.get("anchor", False))
+            note = spec.get("note", "custom case")
+            paths_cfg = spec.get("paths", [ORIGINAL])
+            make_generation(ctx, src_run, run_name, paths_cfg, op, anchor, s0, note)
+        else:
+            raise SystemExit(f"unknown case {case}")
 
 
 def summarize(ctx: Ctx):

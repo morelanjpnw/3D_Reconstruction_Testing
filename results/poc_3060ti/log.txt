@@ -58,3 +58,12 @@
 [case1_gen2] PSNR 22.11 SSIM 0.7772 LPIPS 0.2965 splats 400000 ply 95MB train 198s
 [case2_gen2] rendering path orig (219 frames) from baseline_gen1
 [case2_gen2] processing path orig with realesrgan
+[case2_gen2] training on 219 frames (anchor=False, seed=0)
+  step 0/7000 loss 0.3012 n=62624 0s
+  step 500/7000 loss 0.3029 n=62624 28s
+  step 1000/7000 loss 0.1805 n=79923 64s
+  step 1500/7000 loss 0.1803 n=102001 103s
+  step 2000/7000 loss 0.1559 n=130180 145s
+  step 2500/7000 loss 0.1532 n=166144 188s
+  step 3000/7000 loss 0.2176 n=212044 233s
+  step 3500/7000 loss 0.1911 n=270625 286s

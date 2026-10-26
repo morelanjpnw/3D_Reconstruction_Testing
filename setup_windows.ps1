@@ -104,7 +104,7 @@ if ($blackwell) { $torchArgs = @("torch==2.7.0", "torchvision==0.22.0", "--index
 else            { $torchArgs = @("torch==2.4.1", "torchvision==0.19.1", "--index-url", "https://download.pytorch.org/whl/cu121") }
 Write-Host "Installing PyTorch: $($torchArgs -join ' ')"
 Exec $py -m pip install @torchArgs
-Exec $py -m pip install "numpy<2" "setuptools<81" ninja opencv-python pillow tqdm pyyaml scipy scikit-image lpips pycolmap==4.2.1 imageio imageio-ffmpeg plyfile torchmetrics
+Exec $py -m pip install "numpy<2" "setuptools<81" ninja opencv-python pillow tqdm pyyaml scipy scikit-image lpips pycolmap==4.2.1 imageio imageio-ffmpeg plyfile torchmetrics streamlit pandas
 Exec $py -m pip install gsplat==1.5.3
 Exec $py scripts\patch_gsplat_windows.py
 
@@ -132,4 +132,5 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 Write-Host "`nSetup complete." -ForegroundColor Green
-Write-Host "Next:  tools\env.local.cmd python scripts\prepare_data.py"
+Write-Host "Next (CLI):  tools\env.local.cmd python scripts\prepare_data.py"
+Write-Host "Next (Web UI): .\launch_ui.cmd"
