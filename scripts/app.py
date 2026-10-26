@@ -148,30 +148,27 @@ def build_webgl_splat_html(splat_bytes: bytes, height: int = 620) -> str:
 </div>
 <canvas id="canvas"></canvas>
 <script type="module">
-  import * as SPLAT from "https://cdn.jsdelivr.net/npm/gsplat@1.2.4/dist/index.es.js";
-
   const statusEl = document.getElementById("status");
   const canvas = document.getElementById("canvas");
 
   try {{
+    statusEl.textContent = "Importing WebGL Splat engine...";
+    const SPLAT = await import("https://cdn.jsdelivr.net/npm/gsplat@1.2.4/dist/index.js");
+
+    statusEl.textContent = "Decoding 3D Splat buffer...";
     const b64 = "{b64}";
     const binStr = atob(b64);
     const len = binStr.length;
     const bytes = new Uint8Array(len);
     for (let i = 0; i < len; i++) bytes[i] = binStr.charCodeAt(i);
-    const blob = new Blob([bytes.buffer], {{ type: "application/octet-stream" }});
-    const url = URL.createObjectURL(blob);
 
     const scene = new SPLAT.Scene();
     const camera = new SPLAT.Camera();
     const renderer = new SPLAT.WebGLRenderer(canvas);
     const controls = new SPLAT.OrbitControls(camera, canvas);
 
-    await SPLAT.Loader.LoadAsync(url, scene, (p) => {{
-      statusEl.textContent = "Loading 3D Splat... " + Math.round(p * 100) + "%";
-    }});
-    URL.revokeObjectURL(url);
-    statusEl.textContent = "Interactive 3D Splat Ready (" + (len / (1024*1024)).toFixed(1) + " MB .splat)";
+    SPLAT.Loader.LoadFromArrayBuffer(bytes.buffer, scene);
+    statusEl.textContent = "✅ Interactive 3D Splat Ready (" + (len / (1024*1024)).toFixed(1) + " MB .splat)";
 
     const handleResize = () => renderer.setSize(canvas.clientWidth, canvas.clientHeight);
     window.addEventListener("resize", handleResize);
@@ -185,7 +182,7 @@ def build_webgl_splat_html(splat_bytes: bytes, height: int = 620) -> str:
     requestAnimationFrame(frame);
   }} catch (err) {{
     statusEl.style.color = "#ff6b6b";
-    statusEl.textContent = "WebGL Viewer Error: " + err.message;
+    statusEl.textContent = "WebGL Viewer Error: " + (err && err.message ? err.message : String(err));
   }}
 </script>
 </body>
