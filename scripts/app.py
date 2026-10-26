@@ -5,16 +5,24 @@ Launch via:
 """
 from __future__ import annotations
 
+import base64
 import json
 import subprocess
+import sys
 import time
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 import yaml
+from scipy.spatial.transform import Rotation
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+import splatlib as sl  # noqa: E402
+
 CONFIGS_DIR = ROOT / "configs"
 INPUTS_DIR = ROOT / "inputs"
 SPLATS_DIR = ROOT / "splats"
@@ -34,7 +42,7 @@ st.markdown(
 with st.expander("📖 Quick Plain-English Glossary & Guide (Click to expand)", expanded=False):
     st.markdown(
         """
-- **Gaussian Splat (`.ply`):** Millions of tiny tinted 3D clouds that together form a photorealistic 3D scene you can walk around in real time.
+- **Gaussian Splat (`.ply` / `.splat`):** Millions of tiny tinted 3D clouds that together form a photorealistic 3D scene you can walk around in real time.
 - **SfM / COLMAP (Camera Tracking):** The first step where the computer figures out exactly where the camera was in 3D space for every video frame.
 - **Flythrough:** A virtual camera recording a new video inside your 3D Splat—either following the original camera path or shifting left/right/up/down to fill in blind spots.
 - **Real-Frame Anchoring (`anchor`):** Mixing the original real video frames back in with AI-upscaled frames during training so the AI doesn't "hallucinate" and drift away from reality over multiple generations.
@@ -113,6 +121,78 @@ def load_summary_df(profile: str) -> pd.DataFrame:
     return df[existing].sort_values("run")
 
 
+def build_webgl_splat_html(splat_bytes: bytes, height: int = 620) -> str:
+    """Embed an interactive WebGL 3D Gaussian Splat viewer (Orbit / Pan / Zoom + WASD Fly) using gsplat.js."""
+    b64 = base64.b64encode(splat_bytes).decode("ascii")
+    return f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body, html {{ margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #111318; font-family: sans-serif; color: #eee; }}
+  #canvas {{ width: 100%; height: {height}px; display: block; cursor: grab; }}
+  #canvas:active {{ cursor: grabbing; }}
+  #hud {{
+    position: absolute; top: 10px; left: 10px; background: rgba(15, 18, 25, 0.82);
+    padding: 8px 12px; border-radius: 6px; font-size: 12px; line-height: 1.45;
+    border: 1px solid rgba(255,255,255,0.12); pointer-events: none;
+  }}
+  #status {{ color: #58d68d; font-weight: bold; }}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div id="status">Loading 3D Splat in WebGL...</div>
+  <div>🖱️ <b>Left-Drag:</b> Orbit &nbsp;|&nbsp; <b>Right-Drag:</b> Pan &nbsp;|&nbsp; <b>Scroll:</b> Zoom &nbsp;|&nbsp; ⌨️ <b>WASD / Arrows:</b> Fly</div>
+</div>
+<canvas id="canvas"></canvas>
+<script type="module">
+  import * as SPLAT from "https://cdn.jsdelivr.net/npm/gsplat@1.2.4/dist/index.es.js";
+
+  const statusEl = document.getElementById("status");
+  const canvas = document.getElementById("canvas");
+
+  try {{
+    const b64 = "{b64}";
+    const binStr = atob(b64);
+    const len = binStr.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) bytes[i] = binStr.charCodeAt(i);
+    const blob = new Blob([bytes.buffer], {{ type: "application/octet-stream" }});
+    const url = URL.createObjectURL(blob);
+
+    const scene = new SPLAT.Scene();
+    const camera = new SPLAT.Camera();
+    const renderer = new SPLAT.WebGLRenderer(canvas);
+    const controls = new SPLAT.OrbitControls(camera, canvas);
+
+    await SPLAT.Loader.LoadAsync(url, scene, (p) => {{
+      statusEl.textContent = "Loading 3D Splat... " + Math.round(p * 100) + "%";
+    }});
+    URL.revokeObjectURL(url);
+    statusEl.textContent = "Interactive 3D Splat Ready (" + (len / (1024*1024)).toFixed(1) + " MB .splat)";
+
+    const handleResize = () => renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    window.addEventListener("resize", handleResize);
+    handleResize();
+
+    const frame = () => {{
+      controls.update();
+      renderer.render(scene, camera);
+      requestAnimationFrame(frame);
+    }};
+    requestAnimationFrame(frame);
+  }} catch (err) {{
+    statusEl.style.color = "#ff6b6b";
+    statusEl.textContent = "WebGL Viewer Error: " + err.message;
+  }}
+</script>
+</body>
+</html>
+"""
+
+
 # ----------------------------------------------------------------------------- sidebar: active profile & video
 st.sidebar.header("1. Choose Hardware / Test Profile")
 cfg_files = list_configs()
@@ -139,12 +219,13 @@ if st.sidebar.button("🔄 Refresh Status & Scores", use_container_width=True):
     st.rerun()
 
 # ----------------------------------------------------------------------------- tabs
-tab_run, tab_cfg, tab_cases, tab_res, tab_gal = st.tabs([
+tab_run, tab_cfg, tab_cases, tab_res, tab_gal, tab_3d = st.tabs([
     "🚀 1. Run & Monitor Tests",
     "⚙️ 2. Adjust Settings & Upload Video",
     "🧪 3. Build a Custom Test Case",
     "📊 4. Scoreboard & Charts",
-    "🖼️ 5. Visual Compare & Export 3D Files",
+    "🖼️ 5. Side-by-Side Photo Compare",
+    "🌐 6. Interactive 3D Splat Explorer",
 ])
 
 # === TAB 1: RUN & MONITOR ===
@@ -475,9 +556,9 @@ with tab_res:
             st.markdown("**Visual Artifacts/Blur — LPIPS ↓ (Lower is Better)**")
             st.bar_chart(df.set_index("run")["lpips"])
 
-# === TAB 5: VISUAL COMPARISON & PLY EXPORT ===
+# === TAB 5: VISUAL COMPARISON ===
 with tab_gal:
-    st.subheader("🖼️ Visual Side-by-Side Comparison & 3D File Exports")
+    st.subheader("🖼️ Visual Side-by-Side Comparison")
     st.markdown(
         "Pick any two experimental runs below to compare how sharp they look from test camera angles the AI never saw during training. "
         "*(Inside each image: the **Left half** is the 3D Splat render, and the **Right half** is the real Ground-Truth photograph.)*"
@@ -503,10 +584,88 @@ with tab_gal:
             if img_b.exists():
                 col_b.image(str(img_b), caption=f"{run_b} — {chosen_view} (Left half: 3D Splat | Right half: Real Photo)", use_container_width=True)
 
+# === TAB 6: INTERACTIVE 3D SPLAT EXPLORER ===
+with tab_3d:
+    st.subheader("🌐 Interactive 3D Splat Explorer (SuperSplat-style Viewer & Live GPU Camera)")
+    p_dir = SPLATS_DIR / profile
+    splat_runs = [d for d in sorted(p_dir.glob("*")) if (d / "splat.pt").exists() or (d / "splat.ply").exists()] if p_dir.exists() else []
+
+    if not splat_runs:
+        st.info(f"No trained `.ply` / `.splat` models found under `splats/{profile}/` yet.")
+    else:
+        exp_col1, exp_col2 = st.columns([2, 1])
+        with exp_col1:
+            chosen_3d_run = st.selectbox(
+                "Select Trained 3D Splat Model to Explore",
+                [d.name for d in splat_runs],
+                index=0,
+            )
+        with exp_col2:
+            viewer_mode = st.radio(
+                "Explorer Mode",
+                ["🕸️ Interactive WebGL 3D Viewer (Orbit / WASD in Browser)", "⚡ Live GPU Camera Explorer (Full SH-3 CUDA Rasterizer)"],
+                index=0,
+            )
+
+        run_folder = p_dir / chosen_3d_run
+        ply_file = run_folder / "splat.ply"
+        splat_file = run_folder / "splat.splat"
+        pt_file = run_folder / "splat.pt"
+
+        if viewer_mode.startswith("🕸️"):
+            st.markdown(
+                "**Controls:** **Left-Click + Drag** to Orbit • **Right-Click + Drag** to Pan • **Scroll Wheel** to Zoom • **WASD / Arrow Keys** to Fly. "
+                "*(Uses compact `.splat` format—12.8 MB instead of 95 MB—for fast loading directly inside your browser.)*"
+            )
+            if not splat_file.exists() and pt_file.exists():
+                with st.spinner("Converting splat.pt to compact WebGL .splat format (one-time, takes ~2 seconds)..."):
+                    import torch
+                    p_cpu = torch.load(pt_file, map_location="cpu")
+                    sl.export_splat(p_cpu, splat_file)
+
+            if splat_file.exists():
+                components.html(build_webgl_splat_html(splat_file.read_bytes(), height=620), height=640)
+            else:
+                st.warning("Could not find `splat.splat` or `splat.pt` for this run.")
+
+        else:
+            st.markdown(
+                "**Live GPU Camera Explorer:** Renders your 3D Splat in real time on the server's NVIDIA GPU with full **Degree-3 Spherical Harmonics** (view-dependent reflections/lighting). "
+                "Scrub along the walkthrough path and offset the camera position/angle with the sliders below!"
+            )
+            manifest_path = ROOT / "extracted_frames" / profile / "baseline_manifest.json"
+            if not manifest_path.exists() or not pt_file.exists():
+                st.warning("Needs `baseline_manifest.json` and `splat.pt` to render live GPU views.")
+            else:
+                cams = sl.load_manifest(manifest_path)
+                rad = sl.scene_radius(cams)
+                c_s1, c_s2, c_s3, c_s4, c_s5 = st.columns(5)
+                frame_idx = c_s1.slider("Walkthrough Position", 0, len(cams) - 1, 0)
+                lat_off = c_s2.slider("Move Left / Right", -0.35, 0.35, 0.0, 0.02)
+                vert_off = c_s3.slider("Move Up / Down", -0.35, 0.35, 0.0, 0.02)
+                fwd_off = c_s4.slider("Move Forward / Back", -0.35, 0.35, 0.0, 0.02)
+                yaw_off = c_s5.slider("Look Left / Right (°)", -45.0, 45.0, 0.0, 1.0)
+
+                base_cam = cams[frame_idx]
+                c2w = np.array(base_cam["c2w"], dtype=np.float32)
+                R = c2w[:3, :3]
+                local_rot = Rotation.from_euler("y", yaw_off, degrees=True).as_matrix().astype(np.float32)
+                c2w[:3, 3] = c2w[:3, 3] + R @ np.array([lat_off * rad, vert_off * rad, fwd_off * rad], dtype=np.float32)
+                c2w[:3, :3] = R @ local_rot
+                K = np.array(base_cam["K"], dtype=np.float32)
+
+                @st.cache_resource
+                def get_cached_splat(pt_str: str):
+                    return sl.load_splat(Path(pt_str).parent)
+
+                params_gpu = get_cached_splat(str(pt_file))
+                rgb_img = sl.render_single(params_gpu, c2w, K, base_cam["w"], base_cam["h"])
+                st.image(rgb_img, caption=f"Live CUDA Render — `{chosen_3d_run}` (Camera #{frame_idx}, Yaw {yaw_off:+.0f}°)", use_container_width=True)
+
         st.markdown("---")
-        st.markdown("#### 📦 Export Your 3D Gaussian Splat Files (`.ply`)")
-        st.caption("You can drag-and-drop these `.ply` files straight into the free web viewer **SuperSplat** (`playcanvas.com/supersplat/editor`) or import them into **Unity** using `UnityGaussianSplatting`.")
-        for d in run_dirs:
-            ply = d / "splat.ply"
-            if ply.exists():
-                st.markdown(f"- **`{d.name}`**: `{ply}` ({ply.stat().st_size / 2**20:.1f} MB)")
+        st.markdown("#### 📦 Open in SuperSplat Editor or Unity")
+        st.markdown(
+            f"- **Full `.ply` file (for Unity `UnityGaussianSplatting` or SuperSplat):** `{ply_file}` ({ply_file.stat().st_size / 2**20:.1f} MB)\n"
+            + (f"- **Compact `.splat` file (for fast web viewers):** `{splat_file}` ({splat_file.stat().st_size / 2**20:.1f} MB)\n" if splat_file.exists() else "")
+            + "- 💡 **Want the full SuperSplat editing suite (crop, splat brush, timeline animation)?** Open [**SuperSplat Editor (playcanvas.com/supersplat/editor)**](https://playcanvas.com/supersplat/editor) and drag-and-drop the `.ply` path above straight into the window!"
+        )

@@ -208,6 +208,7 @@ def train(frames, xyz, rgb, out_dir: Path, steps=7000, cap=500_000, seed=0, real
                  n_splats=int(len(params["means"])), steps=steps, n_train_frames=len(tr))
     torch.save({k: v.detach().cpu() for k, v in params.items()}, out_dir / "splat.pt")
     export_ply({k: v.detach().cpu() for k, v in params.items()}, out_dir / "splat.ply")
+    export_splat({k: v.detach().cpu() for k, v in params.items()}, out_dir / "splat.splat")
     stats["ply_mb"] = (out_dir / "splat.ply").stat().st_size / 2**20
     return stats
 
@@ -233,6 +234,41 @@ def export_ply(p, path: Path):
     for i, k in enumerate(names):
         el[k] = data[:, i]
     PlyData([PlyElement.describe(el, "vertex")]).write(str(path))
+
+
+def export_splat(p, path: Path):
+    """Export compact .splat format (32 bytes/gaussian) for instant browser WebGL rendering."""
+    n = len(p["means"])
+    xyz = p["means"].numpy().astype(np.float32)
+    scales = torch.exp(p["scales"]).numpy().astype(np.float32)
+    rgb = np.clip((0.5 + SH_C0 * p["sh0"].reshape(n, 3).numpy()) * 255.0, 0, 255).round().astype(np.uint8)
+    alpha = np.clip(torch.sigmoid(p["opacities"]).numpy() * 255.0, 0, 255).round().astype(np.uint8)[:, None]
+    rgba = np.concatenate([rgb, alpha], axis=1)
+    q = torch.nn.functional.normalize(p["quats"], dim=-1).numpy()
+    rot = np.clip(q * 128.0 + 128.0, 0, 255).round().astype(np.uint8)
+    # sort back-to-front by importance (volume * opacity) so progressive loading looks good immediately
+    order = np.argsort(-(scales.prod(axis=1) * (alpha[:, 0].astype(np.float32) / 255.0)))
+    dt = np.dtype([("xyz", "<f4", (3,)), ("scale", "<f4", (3,)), ("rgba", "u1", (4,)), ("rot", "u1", (4,))])
+    arr = np.empty(n, dtype=dt)
+    arr["xyz"] = xyz[order]
+    arr["scale"] = scales[order]
+    arr["rgba"] = rgba[order]
+    arr["rot"] = rot[order]
+    path.write_bytes(arr.tobytes())
+
+
+@torch.no_grad()
+def render_single(params, c2w: np.ndarray, K: np.ndarray, W: int, H: int) -> np.ndarray:
+    """Render a single RGB uint8 image from arbitrary camera pose c2w (4x4) and intrinsics K (3x3)."""
+    img, _ = _render(
+        params,
+        torch.tensor(c2w, dtype=torch.float32, device=DEV),
+        torch.tensor(K, dtype=torch.float32, device=DEV),
+        int(W),
+        int(H),
+        3,
+    )
+    return (img.cpu().numpy() * 255.0).round().astype(np.uint8)
 
 
 # ----------------------------------------------------------------------------- render / eval

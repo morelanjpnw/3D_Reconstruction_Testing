@@ -20,8 +20,20 @@ def process_dir(src: Path, dst: Path, op: str, scale: int = 2, model: str = "rea
     if op == "realesrgan":
         if not REALESRGAN.exists():
             raise SystemExit(f"Real-ESRGAN binary missing: {REALESRGAN}")
-        subprocess.run([str(REALESRGAN), "-i", str(src), "-o", str(dst), "-n", model, "-s", str(scale),
+        # Note: realesrgan-x4plus is a 4x native network; passing -s 2 to ncnn-vulkan corrupts tile assembly.
+        # Always run at native -s 4 and downscale to target scale if scale != 4.
+        tmp = dst if scale == 4 else dst.parent / (dst.name + "_tmp4x")
+        tmp.mkdir(parents=True, exist_ok=True)
+        subprocess.run([str(REALESRGAN), "-i", str(src), "-o", str(tmp), "-n", model, "-s", "4",
                         "-f", "png"], check=True, cwd=REALESRGAN.parent)
+        if scale != 4:
+            for f in sorted(tmp.glob("*.png")):
+                im4 = cv2.imread(str(f))
+                h4, w4 = im4.shape[:2]
+                tw, th = int(round(w4 * scale / 4)), int(round(h4 * scale / 4))
+                cv2.imwrite(str(dst / f.name), cv2.resize(im4, (tw, th), interpolation=cv2.INTER_AREA))
+            import shutil
+            shutil.rmtree(tmp, ignore_errors=True)
         return
     for f in files:
         img = cv2.imread(str(f))
