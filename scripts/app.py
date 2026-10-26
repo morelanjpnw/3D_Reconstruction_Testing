@@ -131,25 +131,46 @@ def build_webgl_splat_html(splat_bytes: bytes, height: int = 620) -> str:
 <meta charset="utf-8">
 <style>
   body, html {{ margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #111318; font-family: sans-serif; color: #eee; }}
-  #canvas {{ width: 100%; height: {height}px; display: block; cursor: grab; }}
+  #canvas {{ width: 100%; height: {height}px; display: block; cursor: grab; outline: none; }}
   #canvas:active {{ cursor: grabbing; }}
+  #canvas:focus {{ box-shadow: inset 0 0 0 2px #58d68d; }}
   #hud {{
-    position: absolute; top: 10px; left: 10px; background: rgba(15, 18, 25, 0.82);
-    padding: 8px 12px; border-radius: 6px; font-size: 12px; line-height: 1.45;
-    border: 1px solid rgba(255,255,255,0.12); pointer-events: none;
+    position: absolute; top: 10px; left: 10px; background: rgba(15, 18, 25, 0.85);
+    padding: 8px 12px; border-radius: 6px; font-size: 12px; line-height: 1.5;
+    border: 1px solid rgba(255,255,255,0.14); pointer-events: none;
   }}
   #status {{ color: #58d68d; font-weight: bold; }}
+  #focus-badge {{ display: inline-block; margin-left: 8px; padding: 1px 6px; border-radius: 4px; font-size: 11px; background: #e67e22; color: #fff; }}
 </style>
 </head>
 <body>
 <div id="hud">
-  <div id="status">Loading 3D Splat in WebGL...</div>
-  <div>🖱️ <b>Left-Drag:</b> Orbit &nbsp;|&nbsp; <b>Right-Drag:</b> Pan &nbsp;|&nbsp; <b>Scroll:</b> Zoom &nbsp;|&nbsp; ⌨️ <b>WASD / Arrows:</b> Fly</div>
+  <div><span id="status">Loading 3D Splat in WebGL...</span><span id="focus-badge">Click inside 3D view to enable WASD keys</span></div>
+  <div>🖱️ <b>Left-Drag:</b> Orbit &nbsp;|&nbsp; <b>Right-Drag:</b> Pan &nbsp;|&nbsp; <b>Scroll:</b> Zoom &nbsp;|&nbsp; ⌨️ <b>WASD / Arrows:</b> Move &nbsp;|&nbsp; <b>Q/E:</b> Turn &nbsp;|&nbsp; <b>R/F:</b> Tilt</div>
 </div>
-<canvas id="canvas"></canvas>
+<canvas id="canvas" tabindex="0"></canvas>
 <script type="module">
   const statusEl = document.getElementById("status");
+  const badgeEl = document.getElementById("focus-badge");
   const canvas = document.getElementById("canvas");
+
+  const updateFocusBadge = () => {{
+    if (document.activeElement === canvas || document.hasFocus()) {{
+      badgeEl.textContent = "⌨️ Keyboard Active (WASD / Arrows)";
+      badgeEl.style.background = "#27ae60";
+    }} else {{
+      badgeEl.textContent = "Click inside 3D view to enable WASD keys";
+      badgeEl.style.background = "#e67e22";
+    }}
+  }};
+  canvas.addEventListener("pointerdown", () => {{ window.focus(); canvas.focus(); updateFocusBadge(); }});
+  window.addEventListener("focus", updateFocusBadge);
+  window.addEventListener("blur", updateFocusBadge);
+  window.addEventListener("keydown", (e) => {{
+    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", "KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyE", "KeyR", "KeyF"].includes(e.code)) {{
+      e.preventDefault();
+    }}
+  }}, {{ passive: false }});
 
   try {{
     statusEl.textContent = "Importing WebGL Splat engine...";
@@ -166,6 +187,7 @@ def build_webgl_splat_html(splat_bytes: bytes, height: int = 620) -> str:
     const camera = new SPLAT.Camera();
     const renderer = new SPLAT.WebGLRenderer(canvas);
     const controls = new SPLAT.OrbitControls(camera, canvas);
+    controls.dampening = 0.18;
 
     SPLAT.Loader.LoadFromArrayBuffer(bytes.buffer, scene);
     statusEl.textContent = "✅ Interactive 3D Splat Ready (" + (len / (1024*1024)).toFixed(1) + " MB .splat)";
@@ -174,9 +196,41 @@ def build_webgl_splat_html(splat_bytes: bytes, height: int = 620) -> str:
     window.addEventListener("resize", handleResize);
     handleResize();
 
+    // Auto-focus iframe & canvas so WASD works immediately after selecting a model
+    setTimeout(() => {{ window.focus(); canvas.focus(); updateFocusBadge(); }}, 150);
+
+    // Fix flickering: gsplat.js's RenderProgram re-uploads depthIndex and posts a WASM sort job to the worker
+    // on EVERY renderer.render() call, even when the camera is stationary, causing a sort-queue race & depth popping.
+    // We only invoke renderer.render() when the camera pose or viewport actually changes (plus a short settle window
+    // so the async WASM depth-sort worker's final sorted index buffer is drawn cleanly).
+    let lastSig = "";
+    let settleFrames = 90;
+    let isInteracting = false;
+
+    canvas.addEventListener("pointerdown", () => {{ isInteracting = true; settleFrames = 60; }});
+    window.addEventListener("pointerup", () => {{ isInteracting = false; settleFrames = 60; }});
+    canvas.addEventListener("wheel", () => {{ settleFrames = 60; }}, {{ passive: true }});
+    window.addEventListener("keydown", () => {{ settleFrames = 60; }});
+
+    const getCamSig = () => {{
+      const p = camera.position;
+      const r = camera.rotation;
+      return p.x.toFixed(4) + "," + p.y.toFixed(4) + "," + p.z.toFixed(4) + "|" +
+             r.x.toFixed(4) + "," + r.y.toFixed(4) + "," + r.z.toFixed(4) + "," + r.w.toFixed(4) + "|" +
+             canvas.width + "x" + canvas.height;
+    }};
+
     const frame = () => {{
       controls.update();
-      renderer.render(scene, camera);
+      const sig = getCamSig();
+      if (sig !== lastSig) {{
+        lastSig = sig;
+        settleFrames = 45; // allow ~0.75s for background WASM depth-sort worker to finish & settle
+        renderer.render(scene, camera);
+      }} else if (settleFrames > 0 || isInteracting) {{
+        settleFrames--;
+        renderer.render(scene, camera);
+      }}
       requestAnimationFrame(frame);
     }};
     requestAnimationFrame(frame);
