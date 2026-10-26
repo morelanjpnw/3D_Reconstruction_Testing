@@ -1,0 +1,18 @@
+# Large / generated data (reproducible via scripts)
+inputs/
+extracted_frames/
+flythroughs/
+splats/
+logs/
+tools/colmap/
+tools/realesrgan/
+tools/*.zip
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Keep small result summaries; ignore heavy renders
+results/**/*.jpg
+results/**/*.png

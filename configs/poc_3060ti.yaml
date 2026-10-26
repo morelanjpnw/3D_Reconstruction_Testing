@@ -1,0 +1,13 @@
+profile: poc_3060ti
+# Hardware: RTX 3060 Ti, 8 GB (shared with desktop apps), 32 GB RAM. Goal: finish the whole matrix in hours.
+steps: 7000            # training iterations per splat
+cap: 400000            # MCMC max splats (fixed budget -> comparable runs)
+upscale_op: realesrgan # realesrgan | bicubic
+upscale_scale: 2
+n_gens: 4              # case 3 chain: gen2..gen<n_gens>
+n_alt_paths: 3         # case 4 / 5
+path_frame_factor: 1.0 # frames per path = factor * n_train_real
+test_every: 8          # every 8th real frame held out for evaluation
+real_weight: 0.5       # anchored variants: probability of sampling a real frame
+seeds: [0, 1]          # seed[0] for all runs, seed[1] only for the baseline variance floor
+fps: 10
