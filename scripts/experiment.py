@@ -206,8 +206,14 @@ if __name__ == "__main__":
     ap.add_argument("--video", type=Path, help="source video (baseline prep)")
     ap.add_argument("--cases", nargs="*", default=[])
     ap.add_argument("--summary", action="store_true")
+    ap.add_argument("--set", nargs="*", default=[], metavar="KEY=VALUE",
+                    help="override config values, e.g. --set profile=smoke steps=300 cap=50000")
     a = ap.parse_args()
-    ctx = Ctx(yaml.safe_load(a.config.read_text()))
+    cfg = yaml.safe_load(a.config.read_text())
+    for kv in a.set:
+        k, v = kv.split("=", 1)
+        cfg[k] = yaml.safe_load(v)
+    ctx = Ctx(cfg)
     if a.video:
         run_baseline_prep(ctx, a.video)
     for case in a.cases:

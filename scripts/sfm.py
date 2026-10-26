@@ -21,9 +21,19 @@ def run(frames_dir: Path, work: Path, matcher: str = "exhaustive"):
     db = work / "database.db"
     sparse = work / "sparse_raw"
     sparse.mkdir()
-    _run("feature_extractor", "--database_path", db, "--image_path", frames_dir,
-         "--ImageReader.single_camera", 1, "--ImageReader.camera_model", "SIMPLE_RADIAL")
-    _run(f"{matcher}_matcher", "--database_path", db)
+    try:
+        _run("feature_extractor", "--database_path", db, "--image_path", frames_dir,
+             "--ImageReader.single_camera", 1, "--ImageReader.camera_model", "SIMPLE_RADIAL")
+        _run(f"{matcher}_matcher", "--database_path", db)
+    except subprocess.CalledProcessError:
+        # e.g. the COLMAP CUDA build lacks kernels for a brand-new GPU architecture -> use CPU SIFT
+        print("COLMAP GPU step failed; retrying on CPU (slower)", flush=True)
+        if db.exists():
+            db.unlink()
+        _run("feature_extractor", "--database_path", db, "--image_path", frames_dir,
+             "--ImageReader.single_camera", 1, "--ImageReader.camera_model", "SIMPLE_RADIAL",
+             "--FeatureExtraction.use_gpu", 0)
+        _run(f"{matcher}_matcher", "--database_path", db, "--FeatureMatching.use_gpu", 0)
     _run("mapper", "--database_path", db, "--image_path", frames_dir, "--output_path", sparse)
     models = sorted(sparse.iterdir())
     if not models:

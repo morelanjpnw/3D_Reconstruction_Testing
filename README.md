@@ -2,6 +2,23 @@
 
 Experimental pipeline to improve Gaussian Splats by iterating video flythroughs through generative AI upscaling. We compare simple iterations against multi-generational and multi-path approaches.
 
+## Quickstart on a new Windows machine (e.g. the RTX PRO 6000)
+
+```powershell
+mkdir D:\splat_work; cd D:\splat_work                      # any folder you like
+git clone https://github.com/morelanjpnw/3D_Reconstruction_Testing.git
+cd 3D_Reconstruction_Testing
+powershell -ExecutionPolicy Bypass -File .\setup_windows.ps1 -CheckOnly   # reports anything missing (installs nothing)
+powershell -ExecutionPolicy Bypass -File .\setup_windows.ps1              # installs tools + env, GPU self-test (5-15 min first time)
+tools\env.local.cmd python scripts\prepare_data.py                        # downloads the truck test scene -> inputs\truck.mp4
+tools\env.local.cmd python scripts\experiment.py --config configs\rtx6000_quick.yaml --video inputs\truck.mp4 --cases baseline case1 case2 case4 case3 case5 case6
+```
+
+Everything is cached: if a run is interrupted, re-run the same command and it resumes. Results land in
+`results\<profile>\summary.md`; splats in `splats\<profile>\<run>\splat.ply`.
+Use `--set` for quick smoke tests, e.g. `--set profile=smoke steps=300 cap=50000 seeds=[0]`.
+Profiles: `configs\poc_3060ti.yaml` (8 GB GPU), `configs\rtx6000_quick.yaml`, `configs\rtx6000.yaml` (full, long).
+
 ## Directory Layout
 
 | Folder | Purpose |

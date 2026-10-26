@@ -20,7 +20,11 @@ FRAMES_DIR = PROJECT_ROOT / "extracted_frames"
 def find_ffmpeg() -> str:
     path = shutil.which("ffmpeg")
     if not path:
-        sys.exit("ERROR: ffmpeg not found on PATH. Install it (e.g. `winget install Gyan.FFmpeg`).")
+        try:  # fall back to the binary bundled with imageio-ffmpeg (installed in the project env)
+            import imageio_ffmpeg
+            return imageio_ffmpeg.get_ffmpeg_exe()
+        except ImportError:
+            sys.exit("ERROR: ffmpeg not found on PATH. Install it (e.g. `winget install Gyan.FFmpeg`).")
     return path
 
 
