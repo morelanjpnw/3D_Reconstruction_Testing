@@ -140,3 +140,205 @@
   step 6999/7000 loss 0.0454 n=400000 531s
 [case4_gen2] PSNR 21.41 SSIM 0.7375 LPIPS 0.3811 splats 400000 ply 95MB train 531s
 [case4_noai_gen2] rendering path A (219 frames) from baseline_gen1
+[case4_noai_gen2] rendering path B (219 frames) from baseline_gen1
+[case4_noai_gen2] rendering path C (219 frames) from baseline_gen1
+[case4_noai_gen2] training on 657 frames (anchor=False, seed=0)
+  step 0/7000 loss 0.2625 n=62624 0s
+  step 500/7000 loss 0.2514 n=62624 10s
+  step 1000/7000 loss 0.1506 n=79923 20s
+  step 1500/7000 loss 0.1234 n=102001 31s
+  step 2000/7000 loss 0.0978 n=130180 42s
+  step 2500/7000 loss 0.1364 n=166144 54s
+  step 3000/7000 loss 0.0702 n=212044 66s
+  step 3500/7000 loss 0.0626 n=270625 80s
+  step 4000/7000 loss 0.0645 n=345392 96s
+  step 4500/7000 loss 0.0608 n=400000 113s
+  step 5000/7000 loss 0.0472 n=400000 131s
+  step 5500/7000 loss 0.0373 n=400000 149s
+  step 6000/7000 loss 0.0306 n=400000 167s
+  step 6500/7000 loss 0.0424 n=400000 184s
+  step 6999/7000 loss 0.0338 n=400000 199s
+[case4_noai_gen2] PSNR 22.41 SSIM 0.7746 LPIPS 0.3167 splats 400000 ply 95MB train 199s
+[case4a_gen2_anch] rendering path A (219 frames) from baseline_gen1
+[case4a_gen2_anch] processing path A with realesrgan
+[case4a_gen2_anch] rendering path B (219 frames) from baseline_gen1
+[case4a_gen2_anch] processing path B with realesrgan
+[case4a_gen2_anch] rendering path C (219 frames) from baseline_gen1
+[case4a_gen2_anch] processing path C with realesrgan
+[case4a_gen2_anch] training on 876 frames (anchor=True, seed=0)
+  step 0/7000 loss 0.3037 n=62624 0s
+  step 500/7000 loss 0.1861 n=62624 22s
+  step 1000/7000 loss 0.1651 n=79923 45s
+  step 1500/7000 loss 0.1085 n=102001 68s
+  step 2000/7000 loss 0.0997 n=130180 92s
+  step 2500/7000 loss 0.0909 n=166144 115s
+  step 3000/7000 loss 0.0968 n=212044 139s
+  step 3500/7000 loss 0.1034 n=270625 164s
+  step 4000/7000 loss 0.0876 n=345392 190s
+  step 4500/7000 loss 0.0954 n=400000 219s
+  step 5000/7000 loss 0.0700 n=400000 247s
+  step 5500/7000 loss 0.1021 n=400000 276s
+  step 6000/7000 loss 0.0758 n=400000 303s
+  step 6500/7000 loss 0.0822 n=400000 330s
+  step 6999/7000 loss 0.0585 n=400000 356s
+[case4a_gen2_anch] PSNR 23.04 SSIM 0.7895 LPIPS 0.2967 splats 400000 ply 95MB train 356s
+[case3_gen3_pure] rendering path orig (219 frames) from case2_gen2
+[case3_gen3_pure] processing path orig with realesrgan
+[case3_gen3_pure] training on 219 frames (anchor=False, seed=0)
+  step 0/7000 loss 0.3075 n=62624 0s
+  step 500/7000 loss 0.2452 n=62624 29s
+  step 1000/7000 loss 0.1075 n=79923 60s
+  step 1500/7000 loss 0.0964 n=102001 92s
+  step 2000/7000 loss 0.0933 n=130180 123s
+  step 2500/7000 loss 0.0648 n=166144 156s
+  step 3000/7000 loss 0.0637 n=212044 191s
+  step 3500/7000 loss 0.0561 n=270625 228s
+  step 4000/7000 loss 0.0505 n=345392 266s
+  step 4500/7000 loss 0.0402 n=400000 307s
+  step 5000/7000 loss 0.0550 n=400000 349s
+  step 5500/7000 loss 0.0365 n=400000 388s
+  step 6000/7000 loss 0.0314 n=400000 429s
+  step 6500/7000 loss 0.0292 n=400000 469s
+  step 6999/7000 loss 0.0466 n=400000 505s
+[case3_gen3_pure] PSNR 19.82 SSIM 0.6922 LPIPS 0.4254 splats 400000 ply 95MB train 505s
+[case3_gen4_pure] rendering path orig (219 frames) from case3_gen3_pure
+[case3_gen4_pure] processing path orig with realesrgan
+[case3_gen4_pure] training on 219 frames (anchor=False, seed=0)
+  step 0/7000 loss 0.3053 n=62624 0s
+  step 500/7000 loss 0.2333 n=62624 28s
+  step 1000/7000 loss 0.1021 n=79923 60s
+  step 1500/7000 loss 0.0904 n=102001 90s
+  step 2000/7000 loss 0.0815 n=130180 122s
+  step 2500/7000 loss 0.0530 n=166144 154s
+  step 3000/7000 loss 0.0582 n=212044 189s
+  step 3500/7000 loss 0.0402 n=270625 223s
+  step 4000/7000 loss 0.0412 n=345392 260s
+  step 4500/7000 loss 0.0298 n=400000 302s
+  step 5000/7000 loss 0.0361 n=400000 341s
+  step 5500/7000 loss 0.0279 n=400000 380s
+  step 6000/7000 loss 0.0258 n=400000 418s
+  step 6500/7000 loss 0.0266 n=400000 455s
+  step 6999/7000 loss 0.0291 n=400000 493s
+[case3_gen4_pure] PSNR 18.83 SSIM 0.6589 LPIPS 0.4520 splats 400000 ply 95MB train 493s
+[case3a_gen2_anch] rendering path orig (219 frames) from baseline_gen1
+[case3a_gen2_anch] processing path orig with realesrgan
+[case3a_gen2_anch] training on 438 frames (anchor=True, seed=0)
+  step 0/7000 loss 0.2746 n=62624 0s
+  step 500/7000 loss 0.2119 n=62624 23s
+  step 1000/7000 loss 0.1561 n=79923 44s
+  step 1500/7000 loss 0.0987 n=102001 66s
+  step 2000/7000 loss 0.1107 n=130180 86s
+  step 2500/7000 loss 0.0909 n=166144 108s
+  step 3000/7000 loss 0.1045 n=212044 132s
+  step 3500/7000 loss 0.0715 n=270625 158s
+  step 4000/7000 loss 0.0949 n=345392 184s
+  step 4500/7000 loss 0.0741 n=400000 213s
+  step 5000/7000 loss 0.0862 n=400000 242s
+  step 5500/7000 loss 0.0861 n=400000 270s
+  step 6000/7000 loss 0.0725 n=400000 297s
+  step 6500/7000 loss 0.0421 n=400000 326s
+  step 6999/7000 loss 0.0885 n=400000 353s
+[case3a_gen2_anch] PSNR 22.66 SSIM 0.7826 LPIPS 0.3018 splats 400000 ply 95MB train 353s
+[case3a_gen3_anch] rendering path orig (219 frames) from case3a_gen2_anch
+[case3a_gen3_anch] processing path orig with realesrgan
+[case3a_gen3_anch] training on 438 frames (anchor=True, seed=0)
+  step 0/7000 loss 0.2642 n=62624 0s
+  step 500/7000 loss 0.2149 n=62624 22s
+  step 1000/7000 loss 0.1389 n=79923 44s
+  step 1500/7000 loss 0.0918 n=102001 67s
+  step 2000/7000 loss 0.0830 n=130180 89s
+  step 2500/7000 loss 0.0756 n=166144 111s
+  step 3000/7000 loss 0.1011 n=212044 134s
+  step 3500/7000 loss 0.0527 n=270625 160s
+  step 4000/7000 loss 0.0984 n=345392 187s
+  step 4500/7000 loss 0.0773 n=400000 214s
+  step 5000/7000 loss 0.0643 n=400000 243s
+  step 5500/7000 loss 0.0907 n=400000 272s
+  step 6000/7000 loss 0.0729 n=400000 299s
+  step 6500/7000 loss 0.0354 n=400000 329s
+  step 6999/7000 loss 0.0906 n=400000 355s
+[case3a_gen3_anch] PSNR 22.37 SSIM 0.7736 LPIPS 0.3229 splats 400000 ply 95MB train 355s
+[case3a_gen4_anch] rendering path orig (219 frames) from case3a_gen3_anch
+[case3a_gen4_anch] processing path orig with realesrgan
+[case3a_gen4_anch] training on 438 frames (anchor=True, seed=0)
+  step 0/7000 loss 0.2595 n=62624 0s
+  step 500/7000 loss 0.2161 n=62624 21s
+  step 1000/7000 loss 0.1391 n=79923 43s
+  step 1500/7000 loss 0.0849 n=102001 64s
+  step 2000/7000 loss 0.0776 n=130180 86s
+  step 2500/7000 loss 0.0719 n=166144 110s
+  step 3000/7000 loss 0.1057 n=212044 134s
+  step 3500/7000 loss 0.0560 n=270625 158s
+  step 4000/7000 loss 0.1024 n=345392 184s
+  step 4500/7000 loss 0.0809 n=400000 214s
+  step 5000/7000 loss 0.0539 n=400000 245s
+  step 5500/7000 loss 0.0922 n=400000 276s
+  step 6000/7000 loss 0.0765 n=400000 306s
+  step 6500/7000 loss 0.0348 n=400000 333s
+  step 6999/7000 loss 0.0964 n=400000 360s
+[case3a_gen4_anch] PSNR 22.03 SSIM 0.7653 LPIPS 0.3343 splats 400000 ply 95MB train 360s
+[case5_gen3] rendering path E (219 frames) from case4_gen2
+[case5_gen3] processing path E with realesrgan
+[case5_gen3] rendering path F (219 frames) from case4_gen2
+[case5_gen3] processing path F with realesrgan
+[case5_gen3] rendering path G (219 frames) from case4_gen2
+[case5_gen3] processing path G with realesrgan
+[case5_gen3] training on 657 frames (anchor=False, seed=0)
+  step 0/7000 loss 0.2589 n=62624 0s
+  step 500/7000 loss 0.2243 n=62624 29s
+  step 1000/7000 loss 0.1147 n=79923 60s
+  step 1500/7000 loss 0.0957 n=102001 93s
+  step 2000/7000 loss 0.0802 n=130180 126s
+  step 2500/7000 loss 0.0718 n=166144 161s
+  step 3000/7000 loss 0.0542 n=212044 195s
+  step 3500/7000 loss 0.0529 n=270625 232s
+  step 4000/7000 loss 0.0494 n=345392 271s
+  step 4500/7000 loss 0.0381 n=400000 311s
+  step 5000/7000 loss 0.0394 n=400000 352s
+  step 5500/7000 loss 0.0398 n=400000 393s
+  step 6000/7000 loss 0.0345 n=400000 432s
+  step 6500/7000 loss 0.0332 n=400000 471s
+  step 6999/7000 loss 0.0341 n=400000 513s
+[case5_gen3] PSNR 20.23 SSIM 0.6988 LPIPS 0.4245 splats 400000 ply 95MB train 513s
+[case5a_gen3_anch] rendering path E (219 frames) from case4a_gen2_anch
+[case5a_gen3_anch] processing path E with realesrgan
+[case5a_gen3_anch] rendering path F (219 frames) from case4a_gen2_anch
+[case5a_gen3_anch] processing path F with realesrgan
+[case5a_gen3_anch] rendering path G (219 frames) from case4a_gen2_anch
+[case5a_gen3_anch] processing path G with realesrgan
+[case5a_gen3_anch] training on 876 frames (anchor=True, seed=0)
+  step 0/7000 loss 0.3187 n=62624 0s
+  step 500/7000 loss 0.1786 n=62624 20s
+  step 1000/7000 loss 0.1654 n=79923 43s
+  step 1500/7000 loss 0.0929 n=102001 65s
+  step 2000/7000 loss 0.0811 n=130180 90s
+  step 2500/7000 loss 0.0744 n=166144 113s
+  step 3000/7000 loss 0.0697 n=212044 137s
+  step 3500/7000 loss 0.0725 n=270625 164s
+  step 4000/7000 loss 0.0553 n=345392 191s
+  step 4500/7000 loss 0.0611 n=400000 222s
+  step 5000/7000 loss 0.0724 n=400000 250s
+  step 5500/7000 loss 0.1029 n=400000 280s
+  step 6000/7000 loss 0.0485 n=400000 308s
+  step 6500/7000 loss 0.0493 n=400000 336s
+  step 6999/7000 loss 0.0431 n=400000 362s
+[case5a_gen3_anch] PSNR 22.68 SSIM 0.7809 LPIPS 0.3084 splats 400000 ply 95MB train 362s
+[case6a_toon_gen2] rendering path orig (219 frames) from baseline_gen1
+[case6a_toon_gen2] processing path orig with toon
+[case6a_toon_gen2] training on 219 frames (anchor=False, seed=0)
+  step 0/7000 loss 0.3036 n=62624 0s
+  step 500/7000 loss 0.2768 n=62624 10s
+  step 1000/7000 loss 0.1344 n=79923 20s
+  step 1500/7000 loss 0.1211 n=102001 30s
+  step 2000/7000 loss 0.1174 n=130180 40s
+  step 2500/7000 loss 0.0855 n=166144 51s
+  step 3000/7000 loss 0.0807 n=212044 63s
+  step 3500/7000 loss 0.0805 n=270625 77s
+  step 4000/7000 loss 0.0834 n=345392 92s
+  step 4500/7000 loss 0.0575 n=400000 108s
+  step 5000/7000 loss 0.0892 n=400000 126s
+  step 5500/7000 loss 0.0642 n=400000 143s
+  step 6000/7000 loss 0.0624 n=400000 159s
+  step 6500/7000 loss 0.0614 n=400000 174s
+  step 6999/7000 loss 0.0901 n=400000 192s
+[case6a_toon_gen2] PSNR 20.64 SSIM 0.6918 LPIPS 0.3929 splats 400000 ply 95MB train 192s
