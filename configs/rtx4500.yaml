@@ -1,0 +1,16 @@
+profile: rtx4500
+# Office workstation: RTX 4500 Ada Generation, 24 GB VRAM (sm_89).
+# Runs the existing case matrix at near-converged settings. Phase 1 (docs/test_plan.md) will add the
+# B-series options (dense init, exposure compensation, anti-aliasing, depth prior) as config keys.
+# Estimate: 30k steps at 979 px ~10-20 min/run (unmeasured - check train_seconds in metrics.json).
+steps: 30000
+cap: 2000000           # 3M fits at 979 px; drop to 1-2M for full-res (1957x1091) data
+upscale_op: realesrgan
+upscale_scale: 2
+n_gens: 4
+n_alt_paths: 3
+path_frame_factor: 1.0
+test_every: 8
+real_weight: 0.5
+seeds: [0, 1]
+fps: 10                # the truck video is 10 fps; use the video's own frame rate

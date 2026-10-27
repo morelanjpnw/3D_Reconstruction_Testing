@@ -1,73 +1,86 @@
 # Handoff – 3D_Reconstruction_Testing (SplatLab)
 
-**Last Updated:** 2026-10-27 ~02:50 CDT
-**Project Root:** `D:\GeminiSandbox\3D_Reconstruction_Testing`
-**GitHub Repository:** `https://github.com/morelanjpnw/3D_Reconstruction_Testing.git` (Branch: `main`, fully synced)
+**Last Updated:** 2026-10-27 ~03:20 CDT
+**GitHub Repository:** `https://github.com/morelanjpnw/3D_Reconstruction_Testing.git` (branch `main`)
+**Active machine:** office workstation, **NVIDIA RTX 4500 Ada Generation (24 GB VRAM, sm_89)**
+**Previous machine:** home PoC box (RTX 3060 Ti 8 GB) at `D:\GeminiSandbox\3D_Reconstruction_Testing`. Retired for this project.
+
+> Agent: read this file, `AGENTS.md`, and `docs/test_plan.md` before doing anything.
+> Notifications for long jobs follow the user's global agent rules (the ntfy topic is intentionally not stored in this repo).
 
 ---
 
-## 1. Project Overview & Goal
-We built **SplatLab**, an end-to-end experimental pipeline and **Streamlit Web Dashboard** (with built-in **WebGL 3D Splat Explorer** and **Live CUDA Camera Explorer**) to test improving **3D Gaussian Splats (3DGS)** for interactive gaming environments by iterating virtual camera flythroughs through AI upscaling, multi-path camera trajectories, multi-generational loops, and stylization.
+## 1. Getting started on the office machine (new context)
 
-- **Local PoC Machine:** Windows 11, NVIDIA GeForce RTX 3060 Ti (8 GB VRAM), 32 GB RAM, CUDA 11.8, VS 2019/2022 BuildTools.
-- **Work Target Machine:** Windows 10/11, NVIDIA RTX PRO 6000 Blackwell (96 GB VRAM).
-- **Notifications:** High-priority alerts/results are sent to the user's iPhone via `https://ntfy.sh/prodiga_agy_updates2026` (`curl.exe -H "Title: ..." -d "..." https://ntfy.sh/prodiga_agy_updates2026`).
+### 1a. First-time setup (user or agent, PowerShell)
+```powershell
+cd <work folder, e.g. D:\splat_work>
+git clone https://github.com/morelanjpnw/3D_Reconstruction_Testing.git
+cd 3D_Reconstruction_Testing
+powershell -ExecutionPolicy Bypass -File .\setup_windows.ps1 -CheckOnly   # report only
+powershell -ExecutionPolicy Bypass -File .\setup_windows.ps1              # install (5-15 min)
+```
+- Ada (sm_89) takes the **non-Blackwell** branch: PyTorch 2.4.1 `cu121`, `TORCH_CUDA_ARCH_LIST=8.9`. A CUDA Toolkit 12.x `nvcc` plus VS 2019/2022 C++ Build Tools must be installed. `-CheckOnly` reports anything missing.
+- Setup generates `tools\env.local.cmd`. On this machine, **always** use `tools\env.local.cmd <cmd>`, never `tools\env.cmd` (that one is home-machine specific).
+- Setup runs `scripts/patch_gsplat_windows.py` and `scripts/selftest.py`. The first gsplat CUDA JIT build takes a few minutes.
 
----
+### 1b. Get the data (git-ignored, so it isn't in the clone)
+```powershell
+tools\env.local.cmd python scripts\prepare_data.py     # downloads tandt_db.zip (~650 MB) -> inputs\truck.mp4
+```
+`inputs\_raw\tandt_db.zip` also contains the authors' COLMAP model (`tandt/truck/sparse/0`), which test-plan case B1 needs.
 
-## 2. What Is 100% Complete
+### 1c. Smoke-test the new GPU, then measure throughput
+```powershell
+tools\env.local.cmd python scripts\experiment.py --config configs\rtx4500.yaml --video inputs\truck.mp4 --cases baseline --set profile=smoke steps=500 cap=100000 seeds=[0]
+tools\env.local.cmd python scripts\experiment.py --config configs\rtx4500.yaml --video inputs\truck.mp4 --cases baseline
+```
+The second command is a 30k-step, 2M-splat baseline. Its result is the first data point for test plan H1, which predicts a large gain over the PoC's 23.46 dB. Record `train_seconds` and `peak_vram_gb` from `splats\rtx4500\baseline_gen1\metrics.json` and update the time estimates in `docs/test_plan.md`.
 
-### A. Full Proof-of-Concept Matrix on RTX 3060 Ti (`poc_3060ti` — 16/16 Runs Finished)
-All 16 runs across **Baseline** and **Cases 1–6** completed on the Tanks & Temples `truck` scene (`inputs/truck.mp4`, 251 frames at 978×546; 219 train frames + 32 held-out test frames at `test_every: 8`, MCMC `cap: 400,000`, `steps: 7,000`).
-Full metrics are saved in `results/poc_3060ti/summary.md`, `results/poc_3060ti/summary.json`, and documented in `README.md`:
-
-| Run | Description | Gen | Anchored? | PSNR (dB) ↑ | SSIM ↑ | LPIPS ↓ |
-|---|---|---:|:---:|---:|---:|---:|
-| `baseline_gen1` | Real frames only (Seed 0) | 1 | Yes (100%) | **23.46** | **0.8102** | **0.2375** |
-| `baseline_gen1_seed1` | Real frames only (Seed 1 — variance floor `±0.04 dB`) | 1 | Yes (100%) | **23.42** | **0.8109** | **0.2385** |
-| `case1_gen2` | No-AI re-render control (`-1.35 dB` generation loss) | 2 | No | 22.11 | 0.7772 | 0.2965 |
-| `case2_gen2` | Single-path Real-ESRGAN 2x (`1954x1090`), unanchored | 2 | No | 20.99 | 0.7316 | 0.3767 |
-| `case2b_gen2_bicubic` | Single-path 2x Lanczos resize control | 2 | No | 21.91 | 0.7672 | 0.3234 |
-| `case3_gen3_pure` | Unanchored multi-gen Gen 3 | 3 | No | 19.82 | 0.6922 | 0.4254 |
-| `case3_gen4_pure` | Unanchored multi-gen Gen 4 (severe collapse: `-4.63 dB`) | 4 | No | 18.83 | 0.6589 | 0.4520 |
-| `case3a_gen2_anch` | Single-path AI upscale + 50% Real-Frame Anchor | 2 | **Yes (50%)** | **22.66** | **0.7826** | **0.3018** |
-| `case3a_gen3_anch` | Anchored multi-gen Gen 3 (`+2.55 dB` vs pure Gen 3) | 3 | **Yes (50%)** | **22.37** | **0.7736** | **0.3229** |
-| `case3a_gen4_anch` | Anchored multi-gen Gen 4 (`+3.20 dB` vs pure Gen 4) | 4 | **Yes (50%)** | **22.03** | **0.7653** | **0.3343** |
-| `case4_gen2` | Multi-Path (A, B, C) + AI upscale, unanchored | 2 | No | 21.41 | 0.7375 | 0.3811 |
-| `case4_noai_gen2` | Multi-Path (A, B, C) no-AI ablation (`+0.30 dB` vs Case 1) | 2 | No | 22.41 | 0.7746 | 0.3167 |
-| **`case4a_gen2_anch`** | **Multi-Path (A, B, C) + AI + Anchored (Best iterative run)** | 2 | **Yes (50%)** | **23.04** | **0.7895** | **0.2967** |
-| `case5_gen3` | Multi-Path × Multi-Gen (Paths E, F, G), unanchored | 3 | No | 20.23 | 0.6988 | 0.4245 |
-| **`case5a_gen3_anch`** | **Multi-Path × Multi-Gen (Paths E, F, G), Anchored** | 3 | **Yes (50%)** | **22.68** | **0.7809** | **0.3084** |
-| `case6a_toon_gen2` | Deterministic bilateral toon / cel-shade stylization | 2 | No | 20.64 | 0.6918 | 0.3929 |
-
-### B. Codebase & Web Interface
-- **`scripts/app.py` & `launch_ui.cmd`:** Full 6-tab **Streamlit Web Dashboard** with layman explanations, expandable glossary, hover tooltips, background job launcher, live log viewer, settings editor, video uploader, **No-Code Custom Case Builder** (`custom_cases` in YAML), scoreboard charts, side-by-side hold-out render comparison, and **Tab 6: Interactive 3D Splat Explorer**:
-  - **Mode A (WebGL 3D Viewer):** Uses `gsplat@1.2.4` (`dist/index.js`) with `LoadFromArrayBuffer` on compact `.splat` files (`12.8 MB` vs `95 MB` `.ply`). Includes demand-driven rendering + settle window (eliminating background WASM depth-sort race flickering) and explicit iframe/canvas focus management so `WASD` / Arrow / `Q/E` / `R/F` keys work immediately on click.
-  - **Mode B (Live GPU Camera Explorer):** Real-time 6-DoF novel-view rendering on the server's GPU via `gsplat`'s CUDA rasterizer with full Degree-3 Spherical Harmonics.
-- **`scripts/splatlib.py`:** COLMAP loader, spline camera path generator (`make_path`), MCMC trainer (`train`), `.ply` and compact `.splat` exporter (`export_ply`, `export_splat`), batch renderer, single-view interactive renderer (`render_single`), and held-out evaluator (`evaluate`).
-- **`scripts/upscale.py`:** Supports `none | bicubic | realesrgan | toon`. Fixed a critical `realesrgan-ncnn-vulkan` bug where passing `-s 2` to `realesrgan-x4plus` corrupted tile stitching; it now runs native `-s 4` and downsamples cleanly with `cv2.INTER_AREA` to the target scale.
-- **`scripts/experiment.py`:** Resumable, cached orchestrator supporting `baseline`, `case1`..`case6`, dynamic `--set KEY=VALUE` overrides, and user-defined `custom_cases` from YAML.
-- **`setup_windows.ps1`:** One-command Windows installer with `-CheckOnly` mode, Blackwell (`sm_120`, CUDA >= 12.8, PyTorch `cu128`) vs. Ada/Ampere auto-detection, COLMAP & Real-ESRGAN download, `patch_gsplat_windows.py`, `tools\env.local.cmd` generation, and `selftest.py`.
+### 1d. Suggested first prompt for the new session
+> Read handoff.md, AGENTS.md and docs/test_plan.md in D:\<path>\3D_Reconstruction_Testing. Verify setup (`setup_windows.ps1 -CheckOnly`), run the smoke test and the rtx4500 baseline, then start Phase 0 of the test plan.
 
 ---
 
-## 3. Environment & Important Technical Gotchas
-1. **Always run Python via the wrapper (`tools\env.cmd` locally, or `tools\env.local.cmd` on machines set up via `setup_windows.ps1`):**
-   - Loads Visual Studio C++ `vcvars64.bat`, sets `TORCH_CUDA_ARCH_LIST`, adds the `splatlab` conda env to `PATH`, and sets `CL=/DWIN32_LEAN_AND_MEAN /DNOMINMAX` (prevents `windows.h`'s `#define small char` macro from breaking CUDA CUB headers).
-2. **Never launch `streamlit` directly attached to the Antigravity CLI console:**
-   - Running `vcvars64.bat` + `streamlit` inside the CLI's console tree alters Windows Console Input Mode flags. Always start Streamlit detached (`Start-Process -WindowStyle Hidden ...`) or from a separate terminal window via `launch_ui.cmd`.
-3. **Installed `gsplat` Windows Patch (`scripts/patch_gsplat_windows.py`):**
-   - `gsplat 1.5.3` passes `-Wno-attributes` to `extra_cflags`, which MSVC `cl.exe` rejects with `D8021`. `patch_gsplat_windows.py` patches `gsplat/cuda/_backend.py` so `-Wno-attributes` is only passed on non-Windows.
+## 2. Project overview
+**SplatLab** is an end-to-end pipeline plus a **Streamlit dashboard** (`launch_ui.cmd`). It tests whether 3D Gaussian Splats for game environments can be improved by iterating virtual-camera flythroughs through AI upscaling, multi-path trajectories, multi-generation loops and stylization.
+
+### Code map
+- `scripts/splatlib.py`: COLMAP loader, spline flythrough paths (`make_path`), MCMC trainer (`train`), `.ply`/`.splat` export, renderer, held-out evaluator (`evaluate`).
+- `scripts/experiment.py`: resumable, cached orchestrator (`baseline`, `case1`..`case6`, `custom_cases` from YAML, `--set KEY=VALUE` overrides).
+- `scripts/upscale.py`: `none | bicubic | realesrgan | toon`. Real-ESRGAN always runs at native `-s 4`, then downsamples.
+- `scripts/app.py` + `launch_ui.cmd`: 6-tab dashboard, including a WebGL splat viewer and a live CUDA camera explorer.
+- `setup_windows.ps1`: one-command installer with GPU-architecture detection.
+- `configs/`: `poc_3060ti.yaml` (8 GB), **`rtx4500.yaml` (current)**, `rtx6000_quick.yaml` / `rtx6000.yaml` (96 GB, if ever available).
 
 ---
 
-## 4. Next Steps for the New Session
-1. **RTX PRO 6000 Runs (`configs/rtx6000_quick.yaml` & `configs/rtx6000.yaml`):**
-   - Assist the user if any setup or driver quirk arises on the RTX PRO 6000 machine.
-   - Compare `15,000–30,000` step / `1M–3M` splat runs on the RTX 6000 against the 3060 Ti PoC baseline, specifically testing whether higher step counts allow 2x upscaled multi-path anchored runs (`case4a_gen2_anch`) to surpass the 1x `baseline_gen1` PSNR (`23.46 dB`).
-2. **ComfyUI Generative Video Upscaling & Stylization Integration (Next Feature Phase):**
-   - Add a `comfyui` operator in `scripts/upscale.py` that posts frames/videos to a local ComfyUI HTTP API workflow:
-     - **Track A (Fidelity):** Temporally consistent video upscalers (**SeedVR2**, **STAR**, or **Upscale-A-Video**) vs. per-frame Real-ESRGAN.
-     - **Track B (Stylization — Case 6b/6c):** Diffusion stylization (Anime, Claymation) using **Wan 2.1 VACE** or **SDXL/Flux + Depth/Lineart ControlNet + IP-Adapter**, plus an **Instruct-GS2GS** iterative dataset update loop.
-3. **Unity Integration & Real-Time FPS Benchmarking:**
-   - Import the exported `.ply` files into Unity (`UnityGaussianSplatting`) to log in-engine frame rate (FPS), VRAM usage, and visual quality across cases.
+## 3. Results so far (PoC on RTX 3060 Ti, 7k steps, 400k splats, truck 979×546)
+Full table: `results/poc_3060ti/summary.md` and `README.md`. Headlines:
+
+| Run | PSNR | SSIM | LPIPS |
+|---|---:|---:|---:|
+| `baseline_gen1` (real only) | **23.46** | **0.810** | **0.238** |
+| `case1_gen2` (re-render, no AI) | 22.11 | 0.777 | 0.297 |
+| `case2_gen2` (Real-ESRGAN 2x) | 20.99 | 0.732 | 0.377 |
+| `case3_gen4_pure` (unanchored gen 4) | 18.83 | 0.659 | 0.452 |
+| `case4a_gen2_anch` (multi-path + AI + anchored, best iterative) | 23.04 | 0.790 | 0.297 |
+
+**Analysis (details in `docs/test_plan.md`):** no iterative case beats the baseline, and the baseline itself is badly undertrained (5 min, 0.69 GB VRAM). Visible problems: streaky background, flat untextured ground, unreadable text. Likely causes: undertraining, sparse init, and 979 px input. Real-ESRGAN performs worse than plain Lanczos. Anchoring is the biggest lever. The PoC matrix has compute/resolution confounders, and its test set only measures on-path interpolation.
+
+---
+
+## 4. Environment gotchas
+1. Run Python only through `tools\env.local.cmd` (vcvars64, `TORCH_CUDA_ARCH_LIST`, conda env on PATH, `CL=/DWIN32_LEAN_AND_MEAN /DNOMINMAX`).
+2. Never start `streamlit` attached to the agent console. Use `Start-Process -WindowStyle Hidden ...` or have the user run `launch_ui.cmd`.
+3. gsplat 1.5.3 passes `-Wno-attributes`, which MSVC rejects (D8021). Re-run `scripts/patch_gsplat_windows.py` after any gsplat reinstall.
+4. Real-ESRGAN `x4plus`: never use `-s 2` (it corrupts tiles).
+
+---
+
+## 5. Next steps (see `docs/test_plan.md`)
+1. Setup and smoke test on the RTX 4500 (section 1), then run the 30k `rtx4500` baseline.
+2. **Phase 0:** extrapolation split, OCR text-legibility metric, off-path no-reference / FID metric, equal-compute protocol, region metrics.
+3. **Phase 1:** B1–B7 baseline fixes, then the B* combination.
+4. Phases 2–4: full-res data and own capture, Difix3D+ / input-side video SR, Unity benchmarking.
+5. Open questions for the user: approval for Phase 0/1, OK to download full-res T&T truck, whether they will shoot their own scene.

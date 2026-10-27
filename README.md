@@ -20,7 +20,8 @@ tools\env.local.cmd python scripts\experiment.py --config configs\rtx6000_quick.
 ```
 
 Everything is cached: if a run is interrupted, re-run the same command and it resumes. Results land in `results\<profile>\summary.md`; splats in `splats\<profile>\<run>\splat.ply` (and compact `.splat` for instant web viewing).
-Profiles: `configs\poc_3060ti.yaml` (8 GB GPU), `configs\rtx6000_quick.yaml`, `configs\rtx6000.yaml` (full production).
+Profiles: `configs\poc_3060ti.yaml` (8 GB GPU), `configs\rtx4500.yaml` (24 GB RTX 4500 Ada, current office machine), `configs\rtx6000_quick.yaml`, `configs\rtx6000.yaml` (96 GB, full production).
+Current analysis and next test plan: [`docs/test_plan.md`](docs/test_plan.md).
 
 ## Directory Layout
 
